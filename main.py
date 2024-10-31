@@ -1,29 +1,19 @@
 import asyncio
+import pandas as pd
+from alive_progress import alive_it
 from bs4 import BeautifulSoup as bs
 import aiohttp
+import pandas.io.formats.excel
 
+pandas.io.formats.excel.ExcelFormatter.header_style = None
+
+pd.set_option('display.max_rows', 500)
 mos_sud_url = "https://mos-sud.ru/search"
 kazan_sud_url = "https://mirsud.tatarstan.ru/search"
 
-cur_states = ["af3545b", "80c39ae"]
+cur_states = [("af3545b", "Назначено судебное заседание"), ("80c39ae", "Отложено")]
 codex = ["12.27", "12.8", "12.26"]
 year = "2024"
-
-# params = {
-#     'formType': 'fullForm',
-#     'caseNumber': '',
-#     'uid': '',
-#     'participant': '',
-#     'year': '2024',
-#     'caseDateFrom': '',
-#     'caseDateTo': '',
-#     'codex': '',
-#     'caseFinalDateFrom': '',
-#     'caseFinalDateTo': '',
-#     'caseLegalForceDateFrom': '',
-#     'caseLegalForceDateTo': '',
-#     'publishingState': '',
-# }
 headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'ru,en;q=0.9',
@@ -49,37 +39,68 @@ cookies = {
     'c-dis': '1',
 }
 
+
+def wright_to_file(result):
+    df = pd.DataFrame(result)
+    writer = pd.ExcelWriter('mos_sud_result.xlsx')
+    df.to_excel(writer, sheet_name='result', index=False, na_rep='NaN')
+
+    for column in df:
+        col_idx = df.columns.get_loc(column)
+        writer.sheets['result'].set_column(col_idx, col_idx, 20)
+    writer.close()
+
 async def get_gather_data():
+    print("Анализирую данные...")
+    tasks = []
+    result = []
     async with (aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session):
         for cur_state in cur_states:
             params = {'year': year, 'formType': 'on',}
             for item in codex:
-                params["publishingState"] = cur_state
+                params["publishingState"] = cur_state[0]
                 params["codex"] = item
                 async with session.get(mos_sud_url, params=params, headers=headers, cookies=cookies) as response:
                     await asyncio.sleep(2)
                     soup = bs(await response.text(), 'lxml')
                     paginator = soup.find("div", class_="pagenav").find('input').get('value')
-                    for num_page in range(1, int(paginator) + 1):
-                        print(f'---------{num_page}-------------')
-                        params['page'] = str(num_page)
-                        async with session.get(mos_sud_url, params=params, headers=headers) as page_response:
-                            await asyncio.sleep(1)
-                            soup = bs(await page_response.text(), 'lxml')
-                            data_rows = soup.find("table", class_="custom_table").find_all('tr')[1:]
+                    for page_num in range(1, int(paginator) + 1):
+                        params['page'] = str(page_num)
+                        tasks.append(params.copy())
+        print(f"Для обработки найдено {len(tasks)} страниц")
+        await asyncio.sleep(2)
+        print(f"Начинаю сбор данных")
+        print(f"Состояние выполнения:")
+        for param in alive_it(tasks):
+            async with session.get(mos_sud_url, params=param, headers=headers) as page_response:
+                await asyncio.sleep(1)
+                try:
+                    soup = bs(await page_response.text(), 'lxml')
+                    data_rows = soup.find("table", class_="custom_table").find_all('tr')[1:]
+                    state = True if param["publishingState"] == "80c39ae" else False
+                    for row in data_rows:
+                        row = row.find_all('td')
+                        row_result = {"СТ": param["codex"],
+                                      "ДЕЛО": row[0].text.strip(),
+                                      "УЧ": row[3].text.strip().split("№ ")[-1],
+                                      "ТС": "O" if state == "80c39ae" else "Н",
+                                      "СОСТОЯНИЕ": row[2].text.strip().split(" до ")[-1] if state else row[2].text.strip().split(" на ")[-1],
+                                      "СТОРОНЫ": row[1].text.strip().split(": ")[-1] if "Другие участники:" not in row[1].text.strip() else row[1].text.strip()}
+
+                        result.append(row_result)
+                except Exception as e:
+                    continue
 
 
-                            for row in data_rows:
-                                for cell in row.find_all('td'):
-                                    print(cell.text.strip())
-                                print('------------------------------------------------')
 
-
-
-
+    wright_to_file(result)
+    print("Сбор данных завершён успешно. Вы можете закрыть окно.")
 
 def main():
+    # try:
     asyncio.run(get_gather_data())
+    # except:
+    #     print("---------------!!!!!!!---------------\nПроизошла ошибка.\nВозможно проблемы с сайтом или вашим интернетом.\nПопробуйте перезапустить программу!\n---------------!!!!!!!---------------")
 
 
 
