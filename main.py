@@ -80,15 +80,23 @@ async def get_gather_data():
                     state = True if param["publishingState"] == "80c39ae" else False
                     for row in data_rows:
                         row = row.find_all('td')
+                        side = row[1].text.strip().split(": ")[-1]
+                        if "Другие участники" in row[1].text.strip():
+                            side = f"{row[1].find('br').previous.text},\n {row[1].find('br').next.next_sibling.text} "
+
+
                         row_result = {"СТ": param["codex"],
                                       "ДЕЛО": row[0].text.strip(),
                                       "УЧ": row[3].text.strip().split("№ ")[-1],
-                                      "ТС": "O" if state == "80c39ae" else "Н",
+                                      "ТС": "O" if state else "Н",
                                       "СОСТОЯНИЕ": row[2].text.strip().split(" до ")[-1] if state else row[2].text.strip().split(" на ")[-1],
-                                      "СТОРОНЫ": row[1].text.strip().split(": ")[-1] if "Другие участники:" not in row[1].text.strip() else row[1].text.strip()}
+                                      "СТОРОНЫ": side
+                                      }
 
                         result.append(row_result)
                 except Exception as e:
+                    with open("error.txt", "a+") as f:
+                        f.write(f'{param["page"]} - {param["codex"]} - {param["publishingState"]} ------> {e}\n')
                     continue
 
 
