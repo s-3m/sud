@@ -7,9 +7,7 @@ import pandas.io.formats.excel
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
-pd.set_option('display.max_rows', 500)
 mos_sud_url = "https://mos-sud.ru/search"
-kazan_sud_url = "https://mirsud.tatarstan.ru/search"
 
 cur_states = [("af3545b", "Назначено судебное заседание"), ("80c39ae", "Отложено")]
 codex = ["12.27", "12.8", "12.26"]
@@ -105,10 +103,12 @@ async def get_gather_data():
     print("Сбор данных завершён успешно. Вы можете закрыть окно.")
 
 def main():
-    # try:
-    asyncio.run(get_gather_data())
-    # except:
-    #     print("---------------!!!!!!!---------------\nПроизошла ошибка.\nВозможно проблемы с сайтом или вашим интернетом.\nПопробуйте перезапустить программу!\n---------------!!!!!!!---------------")
+    try:
+        asyncio.run(get_gather_data())
+    except:
+         print("---------------!!!!!!!---------------\nПроизошла ошибка.\nВозможно проблемы с сайтом или вашим интернетом.\nПопробуйте перезапустить программу!\n---------------!!!!!!!---------------")
+    print()
+    input("Нажмите любую кнопку для выхода!")
 
 
 
