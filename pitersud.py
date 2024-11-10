@@ -1,14 +1,15 @@
-import os
 import time
-from pprint import pprint
 import pandas as pd
 import undetected_chromedriver as uc
+from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import threading
+
+from urllib3.exceptions import MaxRetryError
 
 cookies = {
     '_ym_uid': '1730894777226644708',
@@ -35,6 +36,7 @@ headers = {
 all_result = []
 page_count = 0
 
+
 def get_data_on_page(page):
     global page_count
     soup = BeautifulSoup(page, 'lxml')
@@ -52,70 +54,102 @@ def get_data_on_page(page):
         }
         all_result.append(result)
     page_count += 1
-    print(f"\rСделал {page_count} страниц.", end='')
-        # page_result.append(result)
+    print(f"\rСделал {page_count} страниц из 530 (значение примерное).", end='')
+    # page_result.append(result)
 
 
-
-def get_page(article):
+def get_page(article, month_number=1):
     # all_result = []
-    count = 0
-    driver = uc.Chrome(headless=True, no_sandbox=False)
-    wait = WebDriverWait(driver, 20)
-    driver.get("https://mirsud.spb.ru/cases/")
-    wait.until(EC.visibility_of_element_located((By.XPATH, "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[2]/div/div[2]/fieldset/button")))
+    count = 1
+    for i in range(month_number, 13):
+        driver = uc.Chrome(headless=True, no_sandbox=True, user_multi_procs=True, version_main=130)
+        wait = WebDriverWait(driver, 20)
+        driver.get("https://mirsud.spb.ru/cases/")
+        wait.until(EC.visibility_of_element_located(
+            (By.XPATH, "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[2]/div/div[2]/fieldset/button")))
 
-    art_input = driver.find_element(By.ID, "id_article")
-    art_input.clear()
-    art_input.send_keys(f"{article}")
+        art_input = driver.find_element(By.ID, "id_article")
+        art_input.clear()
+        art_input.send_keys(f"{article}")
 
-    date_from_input = driver.find_element(By.XPATH, "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[1]/div[2]/div[3]/div/input")
-    date_from_input.clear()
-    date_from_input.send_keys("01.01.2024")
+        # print(f'\n--- {i} ---{threading.current_thread().name}')
+        date_from_input = driver.find_element(By.XPATH,
+                                              "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[1]/div[2]/div[3]/div/input")
+        month = i
+        date_from_input.clear()
+        date_from_input.send_keys(f"01.{month}.2024")
 
-    date_to_input = driver.find_element(By.XPATH, "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[1]/div[2]/div[4]/div/input")
-    date_to_input.clear()
-    date_to_input.send_keys("31.12.2024")
+        date_to_input = driver.find_element(By.XPATH,
+                                            "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[1]/div[2]/div[4]/div/input")
+        date_to_input.clear()
+        if month == 12:
+            date_to_input.send_keys(f"31.{month}.2024")
+        else:
+            date_to_input.send_keys(f"01.{month + 1}.2024")
+        date_to_input.send_keys(Keys.ENTER)
 
-    find_btn = driver.find_element(By.XPATH, "/html/body/div[1]/main/section[2]/div[1]/div/form/div/div[2]/div/div[2]/fieldset/button")
-    find_btn.click()
+        while True:
+            try:
+                wait.until(EC.visibility_of_element_located((By.XPATH, "//tr[@ng-repeat='case in cases']")))
+            except TimeoutException:
+                try:
+                    wait.until(EC.visibility_of_element_located((By.XPATH, "//td[contains(text(), 'Судебные дела, удовлетворяющие запросу, не найдены')]")))
+                    break
+                except:
+                    driver.close()
+                    driver.quit()
+                    get_page(article, i)
+            time.sleep(2)
+            try:
+                get_data_on_page(driver.page_source)
+            except MaxRetryError:
+                pass
+            try:
+                if count % 50 == 0:
+                    time.sleep(120)
+                next_page_btn = driver.find_element(By.CLASS_NAME, "pag__next")
+                next_page_btn.click()
+                count += 1
+                # time.sleep(6)
+            except:
+                break
 
-    while True:
-        wait.until(EC.visibility_of_element_located((By.XPATH, "//tr[@ng-repeat='case in cases']")))
-        time.sleep(7)
-        get_data_on_page(driver.page_source)
-        # all_result.extend(page_result)
-        try:
-            if count % 50 == 0:
-                time.sleep(120)
-            next_page_btn = driver.find_element(By.CLASS_NAME, "pag__next")
-            next_page_btn.click()
-            count += 1
-            # time.sleep(6)
-        except:
-            break
-
-    driver.close()
-    driver.quit()
+        driver.close()
+        driver.quit()
+        time.sleep(20)
 
 
 def main():
-    print("Начинаю сбор данных...")
-    print()
-    threads = []
-    articles = ["12.26", "12.27", "12.8"]
-    for article in articles:
-        thread = threading.Thread(target=get_page, args=(article,))
-        thread.start()
-        threads.append(thread)
-        time.sleep(4)
-    for thread in threads:
-        thread.join()
+    try:
+        print("Начинаю сбор данных...")
+        print()
+        threads = []
+        articles = ["12.26", "12.27", "12.8"]
+        for article in articles:
+            thread = threading.Thread(target=get_page, args=(article,))
+            thread.start()
+            threads.append(thread)
+            time.sleep(4)
+        for thread in threads:
+            thread.join()
+    except:
+        pass
 
+    # for article in articles:
+    #     get_page(article)
 
-    pd.DataFrame(all_result).to_excel("spb_result.xlsx", index=False)
+    pd.DataFrame(all_result).drop_duplicates(subset="Номер дела").to_excel("spb_result.xlsx", index=False)
     print()
-    input("Сбор данных завершён.\n Нажмите любую кнопку для выхода!")
+
 
 if __name__ == '__main__':
-    main()
+    a = time.time()
+    try:
+        main()
+    except Exception:
+        pass
+    b = time.time()
+    print(f'time: {b - a}')
+    input("Сбор данных завершён.\n Вы можете закрыть окно!")
+
+
