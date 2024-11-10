@@ -54,7 +54,7 @@ def get_data_on_page(page):
         }
         all_result.append(result)
     page_count += 1
-    print(f"\rСделал {page_count} страниц из 530 (значение примерное).", end='')
+    print(f"\rСделал {page_count} страниц из 600 (значение примерное).", end='')
     # page_result.append(result)
 
 
@@ -87,7 +87,7 @@ def get_page(article, month_number=1):
         else:
             date_to_input.send_keys(f"01.{month + 1}.2024")
         date_to_input.send_keys(Keys.ENTER)
-
+        page_source = driver.page_source
         while True:
             try:
                 wait.until(EC.visibility_of_element_located((By.XPATH, "//tr[@ng-repeat='case in cases']")))
@@ -101,8 +101,8 @@ def get_page(article, month_number=1):
                     get_page(article, i)
             time.sleep(2)
             try:
-                get_data_on_page(driver.page_source)
-            except MaxRetryError:
+                get_data_on_page(page_source)
+            except:
                 pass
             try:
                 if count % 50 == 0:
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     a = time.time()
     try:
         main()
-    except Exception:
+    except:
         pass
     b = time.time()
     print(f'time: {b - a}')
