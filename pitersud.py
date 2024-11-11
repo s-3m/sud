@@ -62,7 +62,7 @@ def get_page(article, month_number=1):
     # all_result = []
     count = 1
     for i in range(month_number, 13):
-        driver = uc.Chrome(headless=True, no_sandbox=True, user_multi_procs=True, version_main=130)
+        driver = uc.Chrome(headless=True, no_sandbox=False, driver_executable_path="chromedriver.exe")
         wait = WebDriverWait(driver, 20)
         driver.get("https://mirsud.spb.ru/cases/")
         wait.until(EC.visibility_of_element_located(
