@@ -87,10 +87,11 @@ def get_page(article, month_number=1):
         else:
             date_to_input.send_keys(f"01.{month + 1}.2024")
         date_to_input.send_keys(Keys.ENTER)
-        page_source = driver.page_source
+        # page_source = driver.page_source
         while True:
             try:
                 wait.until(EC.visibility_of_element_located((By.XPATH, "//tr[@ng-repeat='case in cases']")))
+                # page_source = driver.page_source
             except TimeoutException:
                 try:
                     wait.until(EC.visibility_of_element_located((By.XPATH, "//td[contains(text(), 'Судебные дела, удовлетворяющие запросу, не найдены')]")))
@@ -101,7 +102,7 @@ def get_page(article, month_number=1):
                     get_page(article, i)
             time.sleep(2)
             try:
-                get_data_on_page(page_source)
+                get_data_on_page(driver.page_source)
             except:
                 pass
             try:
@@ -110,13 +111,9 @@ def get_page(article, month_number=1):
                 next_page_btn = driver.find_element(By.CLASS_NAME, "pag__next")
                 next_page_btn.click()
                 count += 1
-                # time.sleep(6)
             except:
+                driver.quit()
                 break
-
-        driver.close()
-        driver.quit()
-        time.sleep(20)
 
 
 def main():
@@ -143,13 +140,10 @@ def main():
 
 
 if __name__ == '__main__':
-    a = time.time()
     try:
         main()
     except:
         pass
-    b = time.time()
-    print(f'time: {b - a}')
     input("Сбор данных завершён.\n Вы можете закрыть окно!")
 
 
