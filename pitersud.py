@@ -1,4 +1,6 @@
 import time
+from pprint import pprint
+
 import pandas as pd
 import undetected_chromedriver as uc
 from selenium.common import TimeoutException
@@ -52,6 +54,7 @@ def get_data_on_page(page):
             "Статус": row_data[4].text.strip(),
             "Участники": row_data[5].text.strip(),
         }
+        pprint(result)
         all_result.append(result)
     page_count += 1
     print(f"\rСделал {page_count} страниц из 600 (значение примерное).", end='')
@@ -61,7 +64,7 @@ def get_data_on_page(page):
 def get_page(article, month_number=1):
     # all_result = []
     count = 1
-    for i in range(month_number, 13):
+    for i in range(month_number, 3):
         driver = uc.Chrome(headless=True, no_sandbox=False, driver_executable_path="chromedriver.exe")
         wait = WebDriverWait(driver, 20)
         driver.get("https://mirsud.spb.ru/cases/")
@@ -135,15 +138,13 @@ def main():
     # for article in articles:
     #     get_page(article)
 
-    pd.DataFrame(all_result).drop_duplicates(subset="Номер дела").to_excel("spb_result.xlsx", index=False)
+
     print()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except:
-        pass
+    main()
+    pd.DataFrame(all_result).drop_duplicates(subset="Номер дела").to_excel("spb_result.xlsx", index=False)
     input("Сбор данных завершён.\n Вы можете закрыть окно!")
 
 

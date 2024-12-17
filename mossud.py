@@ -4,6 +4,7 @@ from alive_progress import alive_it
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import pandas.io.formats.excel
+from loguru import logger
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -15,17 +16,16 @@ year = "2024"
 headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'ru,en;q=0.9',
+    'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    # 'Cookie': 'currentCourt=; _ym_uid=1730271176292941916; _ym_d=1730271176; _ym_isad=2; c-dis=1',
-    'Referer': 'https://mos-sud.ru/search',
+    # 'Cookie': '_ym_uid=1730271176292941916; _ym_d=1730271176; _ym_isad=2; maintenance_closed=true',
     'Sec-Fetch-Dest': 'document',
     'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Site': 'none',
     'Sec-Fetch-User': '?1',
     'Upgrade-Insecure-Requests': '1',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 YaBrowser/24.7.0.0 Safari/537.36',
-    'cache-control': 'no-cache',
-    'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "YaBrowser";v="24.7", "Yowser";v="2.5"',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36',
+    'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24", "YaBrowser";v="24.10", "Yowser";v="2.5"',
     'sec-ch-ua-mobile': '?0',
     'sec-ch-ua-platform': '"Windows"',
 }
@@ -106,7 +106,8 @@ def main():
     try:
         asyncio.run(get_gather_data())
     except:
-         print("---------------!!!!!!!---------------\nПроизошла ошибка.\nВозможно проблемы с сайтом или вашим интернетом.\nПопробуйте перезапустить программу!\n---------------!!!!!!!---------------")
+        logger.exception("ERROR")
+        print("---------------!!!!!!!---------------\nПроизошла ошибка.\nВозможно проблемы с сайтом или вашим интернетом.\nПопробуйте перезапустить программу!\n---------------!!!!!!!---------------")
     print()
     input("Нажмите любую кнопку для выхода!")
 
