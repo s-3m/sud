@@ -65,6 +65,8 @@ async def get_gather_data():
                     for page_num in range(1, int(paginator) + 1):
                         params['page'] = str(page_num)
                         tasks.append(params.copy())
+                    del params['page']
+
         print(f"Для обработки найдено {len(tasks)} страниц")
         await asyncio.sleep(2)
         print(f"Начинаю сбор данных")
