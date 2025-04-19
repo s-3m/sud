@@ -55,6 +55,7 @@ def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict:
         row_data = {
             "Суд": sud_name,
             "Номер дела": td_list[0].text,
+            "Статья": codex,
             "Дата": date,
             "Время слушания": td_list[1].text,
             "Событие": td_list[2].text,
