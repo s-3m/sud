@@ -103,71 +103,77 @@ def get_search_result(driver, period):
     for search_pcs in all_urls:
         logger.info(f"Собираю данные по {search_pcs[1]} - {search_pcs[2]}")
         for date in alive_it(dates):
-            driver.get(f"{search_pcs[0]}{date}")
             try:
-                element_on_page = WebDriverWait(driver, 120).until(
-                    any_of(*locators)
-                )
-                elem_tag = element_on_page.tag_name
-            except TimeoutException:
-                continue
-            page_source = None
-            if elem_tag == "img":
-                captcha_flag = False
-                while True:
-                    try:
-                        element_on_page = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
-                    except TimeoutException:
-                        captcha_flag = True
-                        break
-                    for _ in range(5):
-                        try:
-                            element_on_page = WebDriverWait(driver, 20).until(
-                                EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
-                            element_on_page.screenshot(f"captcha.png")
-                            captcha_answer = get_captcha_answer("captcha.png")
-                        except ApiException:
-                            driver.refresh()
-                    try:
-                        driver.find_element(By.XPATH, '//*[@id="kcaptchaForm"]/div/div[2]/input').send_keys(captcha_answer,
-                                                                                                            Keys.ENTER)
-                    except NoSuchElementException:
-                        pass
-                    after_captcha_tag_name = "div"
-                    try:
-                        after_captcha = WebDriverWait(driver, 20).until(
-                            any_of(*locators)
-                        )
-                        after_captcha_tag_name = after_captcha.tag_name
-                    except TimeoutException:
-                        for _ in range(5):
-                            driver.refresh()
-                            try:
-                                after_captcha = WebDriverWait(driver, 20).until(
-                                    any_of(*locators)
-                                )
-                                after_captcha_tag_name = after_captcha.tag_name
-                                break
-                            except TimeoutException:
-                                pass
-
-                    if after_captcha_tag_name == "table":
-                        page_source = driver.page_source
-                        break
-                    elif after_captcha_tag_name == "div":
-                        captcha_flag = True
-                        break
-
-                if captcha_flag:
+                driver.get(f"{search_pcs[0]}{date}")
+                try:
+                    element_on_page = WebDriverWait(driver, 120).until(
+                        any_of(*locators)
+                    )
+                    elem_tag = element_on_page.tag_name
+                except TimeoutException:
                     continue
-            elif elem_tag == "div":
+                page_source = None
+                if elem_tag == "img":
+                    captcha_flag = False
+                    while True:
+                        try:
+                            element_on_page = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
+                        except TimeoutException:
+                            captcha_flag = True
+                            break
+                        for _ in range(5):
+                            try:
+                                element_on_page = WebDriverWait(driver, 20).until(
+                                    EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
+                                element_on_page.screenshot(f"captcha.png")
+                                captcha_answer = get_captcha_answer("captcha.png")
+                            except ApiException:
+                                driver.refresh()
+                            except TimeoutException:
+                                continue
+                        try:
+                            driver.find_element(By.XPATH, '//*[@id="kcaptchaForm"]/div/div[2]/input').send_keys(captcha_answer,
+                                                                                                                Keys.ENTER)
+                        except NoSuchElementException:
+                            pass
+                        after_captcha_tag_name = "div"
+                        try:
+                            after_captcha = WebDriverWait(driver, 20).until(
+                                any_of(*locators)
+                            )
+                            after_captcha_tag_name = after_captcha.tag_name
+                        except TimeoutException:
+                            for _ in range(5):
+                                driver.refresh()
+                                try:
+                                    after_captcha = WebDriverWait(driver, 20).until(
+                                        any_of(*locators)
+                                    )
+                                    after_captcha_tag_name = after_captcha.tag_name
+                                    break
+                                except TimeoutException:
+                                    pass
+
+                        if after_captcha_tag_name == "table":
+                            page_source = driver.page_source
+                            break
+                        elif after_captcha_tag_name == "div":
+                            captcha_flag = True
+                            break
+
+                    if captcha_flag:
+                        continue
+                elif elem_tag == "div":
+                    continue
+
+                elif elem_tag == "table":
+                    page_source = driver.page_source
+
+                table_data = get_table_data(page_source, date)
+                all_data.extend(table_data)
+            except Exception as e:
+                logger.exception(e)
                 continue
-
-            elif elem_tag == "table":
-                page_source = driver.page_source
-
-            table_data = get_table_data(page_source, date)
-            all_data.extend(table_data)
 
     try:
         pd.DataFrame(all_data).sort_values(by="Дата").to_excel("Kaliningrad.xlsx", index=False)
