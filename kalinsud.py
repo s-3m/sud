@@ -17,6 +17,7 @@ from alive_progress import alive_it
 from loguru import logger
 import pandas.io.formats.excel
 from dotenv import load_dotenv
+from twocaptcha.api import ApiException
 
 load_dotenv(".env")
 
@@ -81,8 +82,8 @@ def get_captcha_answer(img_path: str) -> str:
 
 def generate_sud_urls():
     linin_area = [(f"https://lenms{i}.kln.msudrf.ru/modules.php?name=sud_delo&op=hl&H_date=", "Ленинский район", f"{i} участок из 8") for i in range(1, 9)]
-    msk_area = [(f"https://moskms{i}.kln.msudrf.ru/modules.php?name=sud_delo&op=hl&H_date=", "Ленинский район", f"{i} участок из 8") for i in range(1, 9)]
-    centr_area = [(f"https://centms{i}.kln.msudrf.ru/modules.php?name=sud_delo&op=hl&H_date=", "Ленинский район", f"{i} участок из 6") for i in range(1, 7)]
+    msk_area = [(f"https://moskms{i}.kln.msudrf.ru/modules.php?name=sud_delo&op=hl&H_date=", "Московский район", f"{i} участок из 8") for i in range(1, 9)]
+    centr_area = [(f"https://centms{i}.kln.msudrf.ru/modules.php?name=sud_delo&op=hl&H_date=", "Центральный район", f"{i} участок из 6") for i in range(1, 7)]
 
     return linin_area + msk_area + centr_area
 
@@ -119,8 +120,14 @@ def get_search_result(driver, period):
                     except TimeoutException:
                         captcha_flag = True
                         break
-                    element_on_page.screenshot(f"captcha.png")
-                    captcha_answer = get_captcha_answer("captcha.png")
+                    for _ in range(5):
+                        try:
+                            element_on_page = WebDriverWait(driver, 20).until(
+                                EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
+                            element_on_page.screenshot(f"captcha.png")
+                            captcha_answer = get_captcha_answer("captcha.png")
+                        except ApiException:
+                            driver.refresh()
                     try:
                         driver.find_element(By.XPATH, '//*[@id="kcaptchaForm"]/div/div[2]/input').send_keys(captcha_answer,
                                                                                                             Keys.ENTER)
@@ -162,7 +169,11 @@ def get_search_result(driver, period):
             table_data = get_table_data(page_source, date)
             all_data.extend(table_data)
 
-    pd.DataFrame(all_data).to_excel("Kaliningrad.xlsx", index=False)
+    try:
+        pd.DataFrame(all_data).sort_values(by="Дата").to_excel("Kaliningrad.xlsx", index=False)
+    except Exception as e:
+        logger.exception(e)
+        pd.DataFrame(all_data).to_excel("Kaliningrad.xlsx", index=False)
 
 def main():
     while True:
@@ -177,7 +188,7 @@ def main():
     chrome_options.add_argument("--ignore-certificate-errors")  # Игнорировать ошибки сертификата
     chrome_options.add_argument("--allow-insecure-localhost")  # Разрешить небезопасные локальные хосты
     try:
-        driver = uc.Chrome(headless=False, version_main=134, options=chrome_options)
+        driver = uc.Chrome(headless=True, version_main=134, options=chrome_options)
         # driver.set_page_load_timeout(13) # Ждём загрузку страницы только 13 секунды
         get_search_result(driver, period)
         input("Сбор данных успешно завершён. Нажмите любую кнопку для выхода")
