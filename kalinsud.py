@@ -128,6 +128,7 @@ def get_search_result(driver, period):
                                     EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
                                 element_on_page.screenshot(f"captcha.png")
                                 captcha_answer = get_captcha_answer("captcha.png")
+                                break
                             except ApiException:
                                 driver.refresh()
                             except TimeoutException:
