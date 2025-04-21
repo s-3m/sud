@@ -55,6 +55,7 @@ def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict | None:
         row_data = {
             "Суд": sud_name,
             "Номер дела": td_list[0].text,
+            "Статья": codex,
             "Дата": date,
             "Время слушания": td_list[1].text,
             "Событие": td_list[2].text,
@@ -178,7 +179,11 @@ def get_search_result(driver, period):
                 continue
 
     try:
-        pd.DataFrame(all_data).sort_values(by="Дата").to_excel("Kaliningrad.xlsx", index=False)
+        df = pd.read_excel("Kaliningrad.xlsx")
+        df["Дата"] = pd.to_datetime(df['Дата'], dayfirst=True)
+        df1 = df.sort_values(by="Дата")
+        df1["Дата"] = df['Дата'].dt.strftime("%d.%m.%Y")
+        df1.to_excel("Kaliningrad123.xlsx", index=False)
     except Exception as e:
         logger.exception(e)
         pd.DataFrame(all_data).to_excel("Kaliningrad.xlsx", index=False)
