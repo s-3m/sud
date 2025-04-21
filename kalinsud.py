@@ -130,7 +130,8 @@ def get_search_result(driver, period):
                                 element_on_page.screenshot(f"captcha.png")
                                 captcha_answer = get_captcha_answer("captcha.png")
                                 break
-                            except ApiException:
+                            except ApiException as e:
+                                logger.exception(e)
                                 driver.refresh()
                             except TimeoutException:
                                 continue
@@ -189,6 +190,14 @@ def get_search_result(driver, period):
         pd.DataFrame(all_data).to_excel("Kaliningrad.xlsx", index=False)
 
 def main():
+    balance = solver.balance()
+    print(f"Ваш баланс: {balance}")
+    print("Для успешного завершения сбора информации баланс олжен быть > 30 рублей")
+    if balance < 5:
+        print("Баланс недостаточный для сбора информации. Пополните баланс и перезапустите приложение!")
+        input("Нажмите EMTER для выхода...")
+        exit(0)
+
     while True:
         period = input("На какой период требуется собрать данные?\n[1] - На текущий месяц\n[2] - На весь год\nВведите номер позиции и нажмите ENTER: ")
         if period in ("1", "2",):
@@ -199,7 +208,8 @@ def main():
 
     chrome_options = Options()
     chrome_options.add_argument("--ignore-certificate-errors")  # Игнорировать ошибки сертификата
-    chrome_options.add_argument("--allow-insecure-localhost")  # Разрешить небезопасные локальные хосты
+    chrome_options.add_argument("--allow-insecure-localhost") # Разрешить небезопасные локальные хосты
+
     try:
         driver = uc.Chrome(headless=True, version_main=None, options=chrome_options)
         # driver.set_page_load_timeout(13) # Ждём загрузку страницы только 13 секунды
