@@ -48,7 +48,7 @@ def get_dates_list(period):
     return formated_dates
 
 
-def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict:
+def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict | None:
     td_list = row.find_all("td")
     codex = td_list[-2].text.split("- ст. ")[-1].replace(";", "").strip()
     if codex.split(" ")[0] in ("12.26", "12.27", "12.8"):
@@ -61,6 +61,7 @@ def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict:
             "ФИО": td_list[3].text.split(" - ст")[0],
         }
         return row_data
+    return None
 
 
 def get_table_data(page_html, date) -> list[dict]:
