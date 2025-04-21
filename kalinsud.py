@@ -201,7 +201,7 @@ def main():
     chrome_options.add_argument("--ignore-certificate-errors")  # Игнорировать ошибки сертификата
     chrome_options.add_argument("--allow-insecure-localhost")  # Разрешить небезопасные локальные хосты
     try:
-        driver = uc.Chrome(headless=True, version_main=134, options=chrome_options)
+        driver = uc.Chrome(headless=True, version_main=None, options=chrome_options)
         # driver.set_page_load_timeout(13) # Ждём загрузку страницы только 13 секунды
         get_search_result(driver, period)
         input("Сбор данных успешно завершён. Нажмите любую кнопку для выхода")
