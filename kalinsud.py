@@ -34,7 +34,7 @@ def get_dates_list(period):
     if period == "1":
         month_range = now_month + 1
     else:
-        month_range = 13
+        month_range = now_month + 3
     now_day = datetime.datetime.now().day
     dates = []
     for month in range(now_month, month_range):
@@ -192,14 +192,14 @@ def get_search_result(driver, period):
 def main():
     balance = solver.balance()
     print(f"Ваш баланс: {balance}")
-    print("Для успешного завершения сбора информации баланс олжен быть > 30 рублей")
+    print("Для успешного завершения сбора информации баланс должен быть > 30 рублей")
     if balance < 5:
         print("Баланс недостаточный для сбора информации. Пополните баланс и перезапустите приложение!")
         input("Нажмите EMTER для выхода...")
         exit(0)
 
     while True:
-        period = input("На какой период требуется собрать данные?\n[1] - На текущий месяц\n[2] - На весь год\nВведите номер позиции и нажмите ENTER: ")
+        period = input("На какой период требуется собрать данные?\n[1] - На текущий месяц\n[2] - На три месяца\nВведите номер позиции и нажмите ENTER: ")
         if period in ("1", "2",):
             break
         else:
