@@ -48,7 +48,7 @@ def get_dates_list(period):
     return formated_dates
 
 
-def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict:
+def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict | None:
     td_list = row.find_all("td")
     codex = td_list[-2].text.split("- ст. ")[-1].replace(";", "").strip()
     if codex.split(" ")[0] in ("12.26", "12.27", "12.8"):
@@ -62,6 +62,7 @@ def get_row_data(row: BeautifulSoup, date: str, sud_name: str) -> dict:
             "ФИО": td_list[3].text.split(" - ст")[0],
         }
         return row_data
+    return None
 
 
 def get_table_data(page_html, date) -> list[dict]:
@@ -128,7 +129,9 @@ def get_search_result(driver, period):
                                     EC.presence_of_element_located((By.XPATH, '//*[@id="kcaptchaForm"]/div/div[1]/img')))
                                 element_on_page.screenshot(f"captcha.png")
                                 captcha_answer = get_captcha_answer("captcha.png")
-                            except ApiException:
+                                break
+                            except ApiException as e:
+                                logger.exception(e)
                                 driver.refresh()
                             except TimeoutException:
                                 continue
@@ -177,12 +180,24 @@ def get_search_result(driver, period):
                 continue
 
     try:
-        pd.DataFrame(all_data).sort_values(by="Дата").to_excel("Kaliningrad.xlsx", index=False)
+        df = pd.read_excel("Kaliningrad.xlsx")
+        df["Дата"] = pd.to_datetime(df['Дата'], dayfirst=True)
+        df1 = df.sort_values(by="Дата")
+        df1["Дата"] = df['Дата'].dt.strftime("%d.%m.%Y")
+        df1.to_excel("Kaliningrad123.xlsx", index=False)
     except Exception as e:
         logger.exception(e)
         pd.DataFrame(all_data).to_excel("Kaliningrad.xlsx", index=False)
 
 def main():
+    balance = solver.balance()
+    print(f"Ваш баланс: {balance}")
+    print("Для успешного завершения сбора информации баланс олжен быть > 30 рублей")
+    if balance < 5:
+        print("Баланс недостаточный для сбора информации. Пополните баланс и перезапустите приложение!")
+        input("Нажмите EMTER для выхода...")
+        exit(0)
+
     while True:
         period = input("На какой период требуется собрать данные?\n[1] - На текущий месяц\n[2] - На весь год\nВведите номер позиции и нажмите ENTER: ")
         if period in ("1", "2",):
@@ -193,9 +208,10 @@ def main():
 
     chrome_options = Options()
     chrome_options.add_argument("--ignore-certificate-errors")  # Игнорировать ошибки сертификата
-    chrome_options.add_argument("--allow-insecure-localhost")  # Разрешить небезопасные локальные хосты
+    chrome_options.add_argument("--allow-insecure-localhost") # Разрешить небезопасные локальные хосты
+
     try:
-        driver = uc.Chrome(headless=True, version_main=134, options=chrome_options)
+        driver = uc.Chrome(headless=True, version_main=None, options=chrome_options)
         # driver.set_page_load_timeout(13) # Ждём загрузку страницы только 13 секунды
         get_search_result(driver, period)
         input("Сбор данных успешно завершён. Нажмите любую кнопку для выхода")
